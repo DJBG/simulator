@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CICLO — Simulador de trading</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #101827;
+    --surface: #16213A;
+    --surface-2: #1C2A46;
+    --line: #2A3A5C;
+    --paper: #E9E3D0;
+    --paper-dim: #A9AC9E;
+    --gain: #5FA97B;
+    --loss: #C06B54;
+    --gold: #C9A24B;
+    --gold-dim: #8B7638;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    background: var(--bg);
+    color: var(--paper);
+    font-family: 'Source Serif 4', Georgia, serif;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+
+  #app{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  .masthead{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+
+  .masthead h1{
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.3px;
+  }
+
+  .masthead .sub{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--paper-dim);
+    margin-top: 4px;
+  }
+
+  .day-badge{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    padding: 4px 10px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .price-block{
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    margin: 6px 0 18px;
+  }
+
+  .price-block .price{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .price-block .delta{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    padding-bottom: 6px;
+  }
+
+  .delta.up{ color: var(--gain); }
+  .delta.down{ color: var(--loss); }
+  .delta.flat{ color: var(--paper-dim); }
+
+  .chart-wrap{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 8px 6px;
+    margin-bottom: 20px;
+  }
+
+  .chart-wrap svg{ display: block; width: 100%; height: auto; }
+
+  .controls{
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  button{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    color: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 9px 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  button:hover{ border-color: var(--gold-dim); }
+  button:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; }
+  button:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+  button.primary{
+    background: var(--gold);
+    color: #16213A;
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+  button.primary:hover{ background: #dcb45f; }
+
+  button.ghost{ background: transparent; }
+
+  .ledger{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+
+  .ledger-cell{
+    background: var(--surface);
+    padding: 12px 14px;
+  }
+
+  .ledger-cell .label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--paper-dim);
+    margin-bottom: 4px;
+  }
+
+  .ledger-cell .value{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 17px;
+  }
+
+  .value.gain{ color: var(--gain); }
+  .value.loss{ color: var(--loss); }
+
+  section h2{
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    color: var(--paper);
+  }
+
+  .trade-panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .trade-row{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .trade-row label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--paper-dim);
+    width: 92px;
+  }
+
+  .trade-row input[type="number"]{
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 3px;
+    min-width: 0;
+  }
+
+  .trade-row input:focus-visible{ outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  .trade-summary{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--paper-dim);
+    margin-bottom: 12px;
+  }
+
+  .trade-buttons{ display: flex; gap: 8px; }
+  .trade-buttons button{ flex: 1; padding: 11px; font-size: 13px; }
+
+  button.buy{ background: var(--gain); border-color: var(--gain); color: #0F1E15; font-weight: 600; }
+  button.buy:hover{ background: #6fbd8c; }
+  button.sell{ background: var(--loss); border-color: var(--loss); color: #2A100A; font-weight: 600; }
+  button.sell:hover{ background: #cf7d67; }
+
+  .msg{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    min-height: 16px;
+    margin-top: -4px;
+    margin-bottom: 8px;
+  }
+
+  .history{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px dashed var(--line);
+  }
+
+  .history li{
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 9px 2px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .history li .tag{
+    width: 62px;
+    flex-shrink: 0;
+  }
+  .tag.buy-tag{ color: var(--gain); }
+  .tag.sell-tag{ color: var(--loss); }
+
+  .history .empty{
+    color: var(--paper-dim);
+    padding: 14px 2px;
+    border-bottom: none;
+  }
+
+  .footer-note{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--paper-dim);
+    line-height: 1.6;
+    margin-top: 28px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+
+  .reset-row{
+    text-align: right;
+    margin-top: 10px;
+  }
+
+  .ma-toggle{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--paper-dim);
+    margin: -10px 0 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .ma-toggle input[type="checkbox"]{
+    accent-color: var(--gold);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+
+  .legend{
+    display: flex;
+    gap: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--paper-dim);
+    padding: 0 8px 8px;
+  }
+
+  .legend span{ display: flex; align-items: center; gap: 5px; }
+  .legend .swatch{ width: 10px; height: 2px; display: inline-block; }
+
+  .tabs{
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .tab-btn{
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--paper-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .tab-btn.active{
+    background: var(--surface-2);
+    color: var(--gold);
+    border-color: var(--gold-dim);
+  }
+
+  .dt-status{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dt-status-left{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dt-badge{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--paper-dim);
+    border: 1px solid var(--line);
+    padding: 4px 9px;
+    border-radius: 3px;
+  }
+
+  .dt-badge.live{
+    color: var(--gain);
+    border-color: var(--gain);
+  }
+
+  .dt-badge.done{
+    color: var(--gold);
+    border-color: var(--gold-dim);
+  }
+
+  .dt-tick{
+    font-size: 11px;
+    color: var(--paper-dim);
+  }
+
+  .dt-timerbar-wrap{
+    flex: 1;
+    min-width: 100px;
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .dt-timerbar{
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.2s linear;
+  }
+
+  .day-summary{
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 22px;
+  }
+
+  .day-summary-title{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .day-summary-text{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="masthead">
+    <div>
+      <h1>CICLO</h1>
+      <div class="sub">CICLO COMPONENTES S.A. · TICKER SIMULADO · NO ES DATA REAL</div>
+    </div>
+    <div class="day-badge" id="dayBadge">DÍA 0</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabSwingBtn">Swing (lento)</button>
+    <button class="tab-btn" id="tabDayBtn">Day trading (rápido)</button>
+  </div>
+
+  <div id="swingView">
+
+  <div class="price-block">
+    <div class="price mono" id="priceNow">$100.00</div>
+    <div class="delta flat mono" id="priceDelta">— 0.00%</div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg id="chartSvg" viewBox="0 0 600 160" preserveAspectRatio="none"></svg>
+    <div class="legend" id="chartLegend" style="display:none;">
+      <span><i class="swatch" style="background:#5FA97B"></i>Precio</span>
+      <span><i class="swatch" style="background:#C9A24B"></i>Media móvil (5 días)</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="stepBtn">Avanzar 1 día</button>
+    <button id="step5Btn">Avanzar 5 días</button>
+    <button id="autoBtn" class="ghost">▶ Autoplay</button>
+  </div>
+
+  <label class="ma-toggle" for="maToggle">
+    <input type="checkbox" id="maToggle" />
+    Mostrar media móvil (5 días)
+  </label>
+
+  <div class="ledger">
+    <div class="ledger-cell">
+      <div class="label">EFECTIVO DISPONIBLE</div>
+      <div class="value mono" id="cashVal">$0.00</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">ACCIONES EN CARTERA</div>
+      <div class="value mono" id="sharesVal">0</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">VALOR TOTAL DE LA CUENTA</div>
+      <div class="value mono" id="totalVal">$0.00</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">GANANCIA / PÉRDIDA</div>
+      <div class="value mono" id="pnlVal">$0.00</div>
+    </div>
+  </div>
+
+  <section class="trade-panel">
+    <h2>Operar</h2>
+    <div class="trade-row">
+      <label for="qtyInput">Cantidad</label>
+      <input type="number" id="qtyInput" min="1" step="1" value="10" inputmode="numeric" />
+    </div>
+    <div class="trade-summary" id="tradeSummary">10 acciones × $100.00 = $1,000.00</div>
+    <div class="msg" id="tradeMsg"></div>
+    <div class="trade-buttons">
+      <button class="buy" id="buyBtn">Comprar</button>
+      <button class="sell" id="sellBtn">Vender</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Historial de operaciones</h2>
+    <ul class="history" id="historyList">
+      <li class="empty">Todavía no has hecho ninguna operación.</li>
+    </ul>
+  </section>
+
+  <div class="reset-row">
+    <button class="ghost" id="resetBtn">Reiniciar simulador</button>
+  </div>
+
+  </div><!-- /swingView -->
+
+  <div id="dayView" style="display:none;">
+
+  <div class="dt-status">
+    <div class="dt-status-left">
+      <span class="dt-badge" id="dtBadge">SESIÓN NO INICIADA</span>
+      <span class="dt-tick mono" id="dtTickLabel">tick 0 / 50</span>
+    </div>
+    <div class="dt-timerbar-wrap">
+      <div class="dt-timerbar" id="dtTimerBar"></div>
+    </div>
+  </div>
+
+  <div class="price-block">
+    <div class="price mono" id="dtPriceNow">$100.00</div>
+    <div class="delta flat mono" id="dtPriceDelta">— 0.00%</div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg id="dtChartSvg" viewBox="0 0 600 160" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="dtStartBtn">Empezar día</button>
+    <button id="dtPauseBtn" class="ghost" disabled>⏸ Pausar</button>
+  </div>
+
+  <div class="ledger">
+    <div class="ledger-cell">
+      <div class="label">EFECTIVO DEL DÍA</div>
+      <div class="value mono" id="dtCashVal">$0.00</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">ACCIONES ABIERTAS</div>
+      <div class="value mono" id="dtSharesVal">0</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">VALOR DE LA CUENTA</div>
+      <div class="value mono" id="dtTotalVal">$0.00</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="label">RESULTADO DEL DÍA</div>
+      <div class="value mono" id="dtPnlVal">$0.00</div>
+    </div>
+  </div>
+
+  <div class="day-summary" id="daySummaryBox" style="display:none;">
+    <div class="day-summary-title">RESUMEN DEL DÍA</div>
+    <div class="day-summary-text" id="daySummaryText"></div>
+    <button class="primary" id="dtNextDayBtn">Empezar otro día</button>
+  </div>
+
+  <section class="trade-panel">
+    <h2>Operar (se cierra todo al terminar el día)</h2>
+    <div class="trade-row">
+      <label for="dtQtyInput">Cantidad</label>
+      <input type="number" id="dtQtyInput" min="1" step="1" value="10" inputmode="numeric" />
+    </div>
+    <div class="trade-summary" id="dtTradeSummary">10 acciones × $100.00 = $1,000.00</div>
+    <div class="msg" id="dtTradeMsg"></div>
+    <div class="trade-buttons">
+      <button class="buy" id="dtBuyBtn" disabled>Comprar</button>
+      <button class="sell" id="dtSellBtn" disabled>Vender</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Operaciones de hoy</h2>
+    <ul class="history" id="dtHistoryList">
+      <li class="empty">Todavía no has operado hoy.</li>
+    </ul>
+  </section>
+
+  <section id="dtLogSection" style="display:none;">
+    <h2>Historial de días</h2>
+    <ul class="history" id="dtDayLog"></ul>
+  </section>
+
+  </div><!-- /dayView -->
+
+  <div class="footer-note">
+    ESTE ES UN SIMULADOR CON DINERO FICTICIO. LOS PRECIOS SE GENERAN CON UN ALGORITMO
+    ALEATORIO Y NO REPRESENTAN NINGÚN ACTIVO REAL. TU PROGRESO SE GUARDA
+    AUTOMÁTICAMENTE EN ESTE NAVEGADOR.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'ciclo-sim-state-v1';
+  const STARTING_CASH = 10000;
+  const STARTING_PRICE = 100;
+  const VOLATILITY = 0.045; // 4.5% de variación máxima por día
+  const DRIFT = 0.001; // ligera tendencia alcista de largo plazo
+
+  let state = null;
+  let autoplayTimer = null;
+
+  const fmt = (n) => {
+    const sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  };
+
+  function defaultState(){
+    return {
+      cash: STARTING_CASH,
+      shares: 0,
+      avgCost: 0,
+      day: 0,
+      priceHistory: [STARTING_PRICE],
+      trades: [],
+      showMA: false
+    };
+  }
+
+  async function loadState(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        return JSON.parse(res.value);
+      }
+    }catch(e){
+      // no existe todavía, usamos el estado por defecto
+    }
+    return defaultState();
+  }
+
+  async function saveState(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+    }catch(e){
+      console.error('No se pudo guardar el progreso', e);
+    }
+  }
+
+  function currentPrice(){
+    return state.priceHistory[state.priceHistory.length - 1];
+  }
+
+  function stepDay(){
+    const last = currentPrice();
+    const shock = (Math.random() - 0.5) * 2 * VOLATILITY;
+    let next = last * (1 + DRIFT + shock);
+    if(next < 1) next = 1;
+    next = Math.round(next * 100) / 100;
+    state.priceHistory.push(next);
+    if(state.priceHistory.length > 120){
+      state.priceHistory.shift();
+    }
+    state.day += 1;
+  }
+
+  const MA_WINDOW = 5;
+
+  function computeMA(hist, window){
+    const ma = [];
+    for(let i = 0; i < hist.length; i++){
+      if(i < window - 1){ ma.push(null); continue; }
+      let sum = 0;
+      for(let j = i - window + 1; j <= i; j++){ sum += hist[j]; }
+      ma.push(sum / window);
+    }
+    return ma;
+  }
+
+  function drawChart(){
+    const svg = document.getElementById('chartSvg');
+    const hist = state.priceHistory;
+    const w = 600, h = 160, pad = 10;
+    const showMA = document.getElementById('maToggle').checked;
+    const maSeries = showMA ? computeMA(hist, MA_WINDOW) : [];
+
+    const allValues = showMA ? hist.concat(maSeries.filter(v => v !== null)) : hist;
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const range = (max - min) || 1;
+
+    const xAt = (i) => hist.length === 1 ? pad : pad + (i / (hist.length - 1)) * (w - pad * 2);
+    const yAt = (p) => h - pad - ((p - min) / range) * (h - pad * 2);
+
+    const pts = hist.map((p, i) => [xAt(i), yAt(p)]);
+
+    let gridLines = '';
+    for(let i = 1; i < 4; i++){
+      const y = (h / 4) * i;
+      gridLines += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="#2A3A5C" stroke-width="1" stroke-dasharray="3,4" />`;
+    }
+
+    const lastUp = hist.length > 1 ? hist[hist.length - 1] >= hist[hist.length - 2] : true;
+    const lineColor = lastUp ? '#5FA97B' : '#C06B54';
+
+    const pathD = pts.map((pt, i) => (i === 0 ? 'M' : 'L') + pt[0].toFixed(1) + ',' + pt[1].toFixed(1)).join(' ');
+    const areaD = pathD + ` L${pts[pts.length-1][0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`;
+
+    let maPath = '';
+    if(showMA){
+      const maPts = maSeries
+        .map((v, i) => v === null ? null : [xAt(i), yAt(v)])
+        .filter(pt => pt !== null);
+      if(maPts.length > 1){
+        const d = maPts.map((pt, i) => (i === 0 ? 'M' : 'L') + pt[0].toFixed(1) + ',' + pt[1].toFixed(1)).join(' ');
+        maPath = `<path d="${d}" fill="none" stroke="#C9A24B" stroke-width="1.75" stroke-dasharray="5,3" />`;
+      }
+    }
+
+    svg.innerHTML = `
+      ${gridLines}
+      <path d="${areaD}" fill="${lineColor}" opacity="0.08" />
+      <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2" />
+      ${maPath}
+      <circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}" r="3.5" fill="${lineColor}" />
+    `;
+
+    document.getElementById('chartLegend').style.display = showMA ? 'flex' : 'none';
+  }
+
+  function render(){
+    const price = currentPrice();
+    const prev = state.priceHistory.length > 1 ? state.priceHistory[state.priceHistory.length - 2] : price;
+    const deltaPct = prev ? ((price - prev) / prev) * 100 : 0;
+
+    document.getElementById('dayBadge').textContent = 'DÍA ' + state.day;
+    document.getElementById('priceNow').textContent = fmt(price);
+
+    const deltaEl = document.getElementById('priceDelta');
+    deltaEl.textContent = (deltaPct >= 0 ? '▲ +' : '▼ ') + deltaPct.toFixed(2) + '%';
+    deltaEl.className = 'delta mono ' + (deltaPct > 0 ? 'up' : deltaPct < 0 ? 'down' : 'flat');
+
+    document.getElementById('cashVal').textContent = fmt(state.cash);
+    document.getElementById('sharesVal').textContent = state.shares.toLocaleString('en-US');
+
+    const holdingsValue = state.shares * price;
+    const totalValue = state.cash + holdingsValue;
+    document.getElementById('totalVal').textContent = fmt(totalValue);
+
+    const pnl = totalValue - STARTING_CASH;
+    const pnlEl = document.getElementById('pnlVal');
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl);
+    pnlEl.className = 'value mono ' + (pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : '');
+
+    updateTradeSummary();
+    renderHistory();
+    drawChart();
+  }
+
+  function updateTradeSummary(){
+    const qty = getQty();
+    const price = currentPrice();
+    document.getElementById('tradeSummary').textContent =
+      qty + ' acciones × ' + fmt(price) + ' = ' + fmt(qty * price);
+  }
+
+  function getQty(){
+    const input = document.getElementById('qtyInput');
+    let qty = parseInt(input.value, 10);
+    if(isNaN(qty) || qty < 1) qty = 0;
+    return qty;
+  }
+
+  function showMsg(text, isError){
+    const el = document.getElementById('tradeMsg');
+    el.textContent = text;
+    el.style.color = isError ? '#C06B54' : '#C9A24B';
+    setTimeout(() => { if(el.textContent === text) el.textContent = ''; }, 3200);
+  }
+
+  function buy(){
+    const qty = getQty();
+    const price = currentPrice();
+    if(qty <= 0){ showMsg('Ingresa una cantidad válida.', true); return; }
+    const cost = qty * price;
+    if(cost > state.cash){ showMsg('No tienes suficiente efectivo para esta compra.', true); return; }
+
+    const totalSharesBefore = state.shares;
+    const newTotalCost = (state.avgCost * totalSharesBefore) + cost;
+    state.shares += qty;
+    state.avgCost = newTotalCost / state.shares;
+    state.cash -= cost;
+
+    state.trades.unshift({ type: 'compra', day: state.day, qty, price, total: cost });
+    showMsg('Compra ejecutada: ' + qty + ' acciones a ' + fmt(price) + '.', false);
+    persistAndRender();
+  }
+
+  function sell(){
+    const qty = getQty();
+    const price = currentPrice();
+    if(qty <= 0){ showMsg('Ingresa una cantidad válida.', true); return; }
+    if(qty > state.shares){ showMsg('No tienes esa cantidad de acciones para vender.', true); return; }
+
+    const proceeds = qty * price;
+    state.shares -= qty;
+    state.cash += proceeds;
+    if(state.shares === 0) state.avgCost = 0;
+
+    state.trades.unshift({ type: 'venta', day: state.day, qty, price, total: proceeds });
+    showMsg('Venta ejecutada: ' + qty + ' acciones a ' + fmt(price) + '.', false);
+    persistAndRender();
+  }
+
+  function renderHistory(){
+    const list = document.getElementById('historyList');
+    if(state.trades.length === 0){
+      list.innerHTML = '<li class="empty">Todavía no has hecho ninguna operación.</li>';
+      return;
+    }
+    list.innerHTML = state.trades.slice(0, 30).map(t => `
+      <li>
+        <span class="tag ${t.type === 'compra' ? 'buy-tag' : 'sell-tag'}">${t.type.toUpperCase()}</span>
+        <span>día ${t.day}</span>
+        <span>${t.qty} × ${fmt(t.price)}</span>
+        <span>${fmt(t.total)}</span>
+      </li>
+    `).join('');
+  }
+
+  async function persistAndRender(){
+    render();
+    await saveState();
+  }
+
+  async function handleStep(days){
+    for(let i = 0; i < days; i++){ stepDay(); }
+    await persistAndRender();
+  }
+
+  function toggleAutoplay(){
+    const btn = document.getElementById('autoBtn');
+    if(autoplayTimer){
+      clearInterval(autoplayTimer);
+      autoplayTimer = null;
+      btn.textContent = '▶ Autoplay';
+    }else{
+      btn.textContent = '⏸ Detener';
+      autoplayTimer = setInterval(() => { handleStep(1); }, 1800);
+    }
+  }
+
+  async function resetSim(){
+    if(autoplayTimer){ clearInterval(autoplayTimer); autoplayTimer = null; document.getElementById('autoBtn').textContent = '▶ Autoplay'; }
+    state = defaultState();
+    document.getElementById('maToggle').checked = false;
+    await persistAndRender();
+  }
+
+  async function init(){
+    state = await loadState();
+    if(typeof state.showMA !== 'boolean') state.showMA = false;
+    document.getElementById('maToggle').checked = state.showMA;
+
+    document.getElementById('stepBtn').addEventListener('click', () => handleStep(1));
+    document.getElementById('step5Btn').addEventListener('click', () => handleStep(5));
+    document.getElementById('autoBtn').addEventListener('click', toggleAutoplay);
+    document.getElementById('buyBtn').addEventListener('click', buy);
+    document.getElementById('sellBtn').addEventListener('click', sell);
+    document.getElementById('resetBtn').addEventListener('click', resetSim);
+    document.getElementById('qtyInput').addEventListener('input', updateTradeSummary);
+    document.getElementById('maToggle').addEventListener('change', (e) => {
+      state.showMA = e.target.checked;
+      drawChart();
+      saveState();
+    });
+    render();
+  }
+
+  // ===================== MODO DAY TRADING =====================
+
+  const DT_STORAGE_KEY = 'ciclo-daytrading-state-v1';
+  const DT_STARTING_CASH = 2000;
+  const DT_MAX_TICKS = 50;
+  const DT_TICK_MS = 1200;
+  const DT_VOLATILITY = 0.012; // 1.2% por tick, movimiento rápido intradía
+
+  let dt = null;
+  let dtTimer = null;
+
+  function dtDefaultState(){
+    return {
+      active: false,
+      tick: 0,
+      cash: DT_STARTING_CASH,
+      shares: 0,
+      avgCost: 0,
+      priceHistory: [100],
+      trades: [],
+      dayLog: []
+    };
+  }
+
+  async function dtLoadState(){
+    try{
+      const res = await window.storage.get(DT_STORAGE_KEY, false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        parsed.active = false; // nunca reanudar una sesión "en vivo" tras recargar
+        return parsed;
+      }
+    }catch(e){ /* no existe todavía */ }
+    return dtDefaultState();
+  }
+
+  async function dtSaveState(){
+    try{ await window.storage.set(DT_STORAGE_KEY, JSON.stringify(dt), false); }
+    catch(e){ console.error('No se pudo guardar la sesión de day trading', e); }
+  }
+
+  function dtCurrentPrice(){
+    return dt.priceHistory[dt.priceHistory.length - 1];
+  }
+
+  function dtTickStep(){
+    const last = dtCurrentPrice();
+    const shock = (Math.random() - 0.5) * 2 * DT_VOLATILITY;
+    let next = last * (1 + shock);
+    if(next < 1) next = 1;
+    next = Math.round(next * 100) / 100;
+    dt.priceHistory.push(next);
+  }
+
+  function dtGetQty(){
+    const input = document.getElementById('dtQtyInput');
+    let qty = parseInt(input.value, 10);
+    if(isNaN(qty) || qty < 1) qty = 0;
+    return qty;
+  }
+
+  function dtShowMsg(text, isError){
+    const el = document.getElementById('dtTradeMsg');
+    el.textContent = text;
+    el.style.color = isError ? '#C06B54' : '#C9A24B';
+    setTimeout(() => { if(el.textContent === text) el.textContent = ''; }, 2400);
+  }
+
+  function dtDrawChart(){
+    const svg = document.getElementById('dtChartSvg');
+    const hist = dt.priceHistory;
+    const w = 600, h = 160, pad = 10;
+    const min = Math.min(...hist);
+    const max = Math.max(...hist);
+    const range = (max - min) || 1;
+
+    const pts = hist.map((p, i) => {
+      const x = hist.length === 1 ? pad : pad + (i / (hist.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((p - min) / range) * (h - pad * 2);
+      return [x, y];
+    });
+
+    let gridLines = '';
+    for(let i = 1; i < 4; i++){
+      const y = (h / 4) * i;
+      gridLines += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="#2A3A5C" stroke-width="1" stroke-dasharray="3,4" />`;
+    }
+
+    const lastUp = hist.length > 1 ? hist[hist.length - 1] >= hist[hist.length - 2] : true;
+    const lineColor = lastUp ? '#5FA97B' : '#C06B54';
+    const pathD = pts.map((pt, i) => (i === 0 ? 'M' : 'L') + pt[0].toFixed(1) + ',' + pt[1].toFixed(1)).join(' ');
+    const areaD = pathD + ` L${pts[pts.length-1][0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`;
+
+    svg.innerHTML = `
+      ${gridLines}
+      <path d="${areaD}" fill="${lineColor}" opacity="0.08" />
+      <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2" />
+      <circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}" r="3.5" fill="${lineColor}" />
+    `;
+  }
+
+  function dtUpdateTradeSummary(){
+    const qty = dtGetQty();
+    const price = dtCurrentPrice();
+    document.getElementById('dtTradeSummary').textContent =
+      qty + ' acciones × ' + fmt(price) + ' = ' + fmt(qty * price);
+  }
+
+  function dtRenderHistory(){
+    const list = document.getElementById('dtHistoryList');
+    if(dt.trades.length === 0){
+      list.innerHTML = '<li class="empty">Todavía no has operado hoy.</li>';
+      return;
+    }
+    list.innerHTML = dt.trades.slice(0, 30).map(t => `
+      <li>
+        <span class="tag ${t.type === 'compra' ? 'buy-tag' : 'sell-tag'}">${t.type.toUpperCase()}</span>
+        <span>tick ${t.tick}</span>
+        <span>${t.qty} × ${fmt(t.price)}</span>
+        <span>${fmt(t.total)}</span>
+      </li>
+    `).join('');
+  }
+
+  function dtRenderDayLog(){
+    const section = document.getElementById('dtLogSection');
+    const list = document.getElementById('dtDayLog');
+    if(dt.dayLog.length === 0){
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = 'block';
+    list.innerHTML = dt.dayLog.slice(0, 20).map((d, idx) => `
+      <li>
+        <span>día ${dt.dayLog.length - idx}</span>
+        <span>${d.trades} operaciones</span>
+        <span class="${d.pnl >= 0 ? 'tag buy-tag' : 'tag sell-tag'}">${d.pnl >= 0 ? '+' : ''}${fmt(d.pnl)}</span>
+      </li>
+    `).join('');
+  }
+
+  function dtRender(){
+    const price = dtCurrentPrice();
+    const prev = dt.priceHistory.length > 1 ? dt.priceHistory[dt.priceHistory.length - 2] : price;
+    const deltaPct = prev ? ((price - prev) / prev) * 100 : 0;
+
+    document.getElementById('dtPriceNow').textContent = fmt(price);
+    const deltaEl = document.getElementById('dtPriceDelta');
+    deltaEl.textContent = (deltaPct >= 0 ? '▲ +' : '▼ ') + deltaPct.toFixed(2) + '%';
+    deltaEl.className = 'delta mono ' + (deltaPct > 0 ? 'up' : deltaPct < 0 ? 'down' : 'flat');
+
+    document.getElementById('dtCashVal').textContent = fmt(dt.cash);
+    document.getElementById('dtSharesVal').textContent = dt.shares.toLocaleString('en-US');
+
+    const holdingsValue = dt.shares * price;
+    const totalValue = dt.cash + holdingsValue;
+    document.getElementById('dtTotalVal').textContent = fmt(totalValue);
+
+    const pnl = totalValue - DT_STARTING_CASH;
+    const pnlEl = document.getElementById('dtPnlVal');
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl);
+    pnlEl.className = 'value mono ' + (pnl > 0 ? 'gain' : pnl < 0 ? 'loss' : '');
+
+    document.getElementById('dtTickLabel').textContent = 'tick ' + dt.tick + ' / ' + DT_MAX_TICKS;
+    document.getElementById('dtTimerBar').style.width = ((dt.tick / DT_MAX_TICKS) * 100).toFixed(1) + '%';
+
+    const badge = document.getElementById('dtBadge');
+    if(dt.active){
+      badge.textContent = 'EN VIVO';
+      badge.className = 'dt-badge live';
+    }else if(dt.tick >= DT_MAX_TICKS){
+      badge.textContent = 'DÍA TERMINADO';
+      badge.className = 'dt-badge done';
+    }else{
+      badge.textContent = 'SESIÓN NO INICIADA';
+      badge.className = 'dt-badge';
+    }
+
+    dtUpdateTradeSummary();
+    dtRenderHistory();
+    dtRenderDayLog();
+    dtDrawChart();
+  }
+
+  function dtBuy(){
+    if(!dt.active) return;
+    const qty = dtGetQty();
+    const price = dtCurrentPrice();
+    if(qty <= 0){ dtShowMsg('Ingresa una cantidad válida.', true); return; }
+    const cost = qty * price;
+    if(cost > dt.cash){ dtShowMsg('No tienes suficiente efectivo del día.', true); return; }
+
+    const newTotalCost = (dt.avgCost * dt.shares) + cost;
+    dt.shares += qty;
+    dt.avgCost = newTotalCost / dt.shares;
+    dt.cash -= cost;
+    dt.trades.unshift({ type: 'compra', tick: dt.tick, qty, price, total: cost });
+    dtShowMsg('Compra: ' + qty + ' a ' + fmt(price) + '.', false);
+    dtRender();
+    dtSaveState();
+  }
+
+  function dtSell(){
+    if(!dt.active) return;
+    const qty = dtGetQty();
+    const price = dtCurrentPrice();
+    if(qty <= 0){ dtShowMsg('Ingresa una cantidad válida.', true); return; }
+    if(qty > dt.shares){ dtShowMsg('No tienes esa cantidad abierta.', true); return; }
+
+    const proceeds = qty * price;
+    dt.shares -= qty;
+    dt.cash += proceeds;
+    if(dt.shares === 0) dt.avgCost = 0;
+    dt.trades.unshift({ type: 'venta', tick: dt.tick, qty, price, total: proceeds });
+    dtShowMsg('Venta: ' + qty + ' a ' + fmt(price) + '.', false);
+    dtRender();
+    dtSaveState();
+  }
+
+  function dtStopTimer(){
+    if(dtTimer){ clearInterval(dtTimer); dtTimer = null; }
+  }
+
+  function dtTick(){
+    if(!dt.active) return;
+    dtTickStep();
+    dt.tick += 1;
+    if(dt.tick >= DT_MAX_TICKS){
+      dtEndDay();
+    }else{
+      dtRender();
+      dtSaveState();
+    }
+  }
+
+  function dtEndDay(){
+    dtStopTimer();
+    const price = dtCurrentPrice();
+    if(dt.shares > 0){
+      const proceeds = dt.shares * price;
+      dt.trades.unshift({ type: 'venta', tick: dt.tick, qty: dt.shares, price, total: proceeds });
+      dt.cash += proceeds;
+      dt.shares = 0;
+      dt.avgCost = 0;
+    }
+    const pnl = dt.cash - DT_STARTING_CASH;
+    dt.dayLog.unshift({ pnl, trades: dt.trades.length });
+    dt.active = false;
+
+    document.getElementById('dtBuyBtn').disabled = true;
+    document.getElementById('dtSellBtn').disabled = true;
+    document.getElementById('dtPauseBtn').disabled = true;
+    document.getElementById('dtStartBtn').disabled = false;
+    document.getElementById('dtStartBtn').textContent = 'Empezar día';
+
+    const summaryBox = document.getElementById('daySummaryBox');
+    const summaryText = document.getElementById('daySummaryText');
+    const closedNote = pnl === (dt.cash - DT_STARTING_CASH) ? '' : '';
+    summaryText.innerHTML =
+      'Cerraste la sesión con un resultado de <strong>' + (pnl >= 0 ? '+' : '') + fmt(pnl) + '</strong> ' +
+      'después de ' + dt.trades.length + ' operaciones en ' + DT_MAX_TICKS + ' ticks. ' +
+      'Cualquier posición abierta se cerró automáticamente al terminar el día (así funciona el day trading real: nada se queda abierto de un día para otro).';
+    summaryBox.style.display = 'block';
+
+    dtRender();
+    dtSaveState();
+  }
+
+  function dtStartDay(){
+    dt.active = true;
+    dt.tick = 0;
+    dt.cash = DT_STARTING_CASH;
+    dt.shares = 0;
+    dt.avgCost = 0;
+    dt.priceHistory = [100];
+    dt.trades = [];
+
+    document.getElementById('daySummaryBox').style.display = 'none';
+    document.getElementById('dtBuyBtn').disabled = false;
+    document.getElementById('dtSellBtn').disabled = false;
+    document.getElementById('dtPauseBtn').disabled = false;
+    document.getElementById('dtPauseBtn').textContent = '⏸ Pausar';
+    document.getElementById('dtStartBtn').disabled = true;
+    document.getElementById('dtStartBtn').textContent = 'Sesión en curso…';
+
+    dtStopTimer();
+    dtTimer = setInterval(dtTick, DT_TICK_MS);
+    dtRender();
+    dtSaveState();
+  }
+
+  function dtPauseResume(){
+    if(!dt.active) return;
+    const btn = document.getElementById('dtPauseBtn');
+    if(dtTimer){
+      dtStopTimer();
+      btn.textContent = '▶ Reanudar';
+    }else{
+      dtTimer = setInterval(dtTick, DT_TICK_MS);
+      btn.textContent = '⏸ Pausar';
+    }
+  }
+
+  async function dtInit(){
+    dt = await dtLoadState();
+    document.getElementById('dtStartBtn').addEventListener('click', dtStartDay);
+    document.getElementById('dtPauseBtn').addEventListener('click', dtPauseResume);
+    document.getElementById('dtNextDayBtn').addEventListener('click', dtStartDay);
+    document.getElementById('dtBuyBtn').addEventListener('click', dtBuy);
+    document.getElementById('dtSellBtn').addEventListener('click', dtSell);
+    document.getElementById('dtQtyInput').addEventListener('input', dtUpdateTradeSummary);
+
+    if(dt.tick >= DT_MAX_TICKS && dt.dayLog.length > 0){
+      document.getElementById('daySummaryBox').style.display = 'none';
+    }
+    document.getElementById('dtBuyBtn').disabled = true;
+    document.getElementById('dtSellBtn').disabled = true;
+    document.getElementById('dtPauseBtn').disabled = true;
+    dtRender();
+  }
+
+  // ===================== TABS =====================
+
+  function setupTabs(){
+    const swingBtn = document.getElementById('tabSwingBtn');
+    const dayBtn = document.getElementById('tabDayBtn');
+    const swingView = document.getElementById('swingView');
+    const dayView = document.getElementById('dayView');
+
+    swingBtn.addEventListener('click', () => {
+      swingView.style.display = 'block';
+      dayView.style.display = 'none';
+      swingBtn.classList.add('active');
+      dayBtn.classList.remove('active');
+    });
+
+    dayBtn.addEventListener('click', () => {
+      swingView.style.display = 'none';
+      dayView.style.display = 'block';
+      dayBtn.classList.add('active');
+      swingBtn.classList.remove('active');
+    });
+  }
+
+  init();
+  dtInit();
+  setupTabs();
+})();
+</script>
+</body>
+</html>
