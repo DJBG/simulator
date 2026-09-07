@@ -651,7 +651,7 @@
     // --- noticias ---
     if(D.min > 8 && D.min < 370 && Math.random() < 0.014){
       const n = pick(LIVE_HEADLINES);
-      D.news.unshift({ min: D.min, text: n.text });
+      D.news.unshift({ min: D.min, text: n.t });
       if(n.k !== 0){
         D.drift = n.k * D.sigma * (1.4 + Math.random()*2.4);
         D.driftLeft = 8 + Math.floor(Math.random()*18);
